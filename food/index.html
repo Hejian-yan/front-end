@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>焦糖美食指南</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>🍮 焦糖美食指南</h1>
+
+        <!-- ==================== 第二题：搜索、排序、新增、编辑 ==================== -->
+        <div class="operate-area">
+
+            <div class="search-row">
+                <input id="searchInput" placeholder="输入关键词搜索美食名称/地点">
+
+                <select id="sortSelect">
+                    <option value="score-desc">按评分从高到低</option>
+                    <option value="price-asc">按价格由低到高</option>
+                </select>
+
+                <button id="searchBtn">搜索 & 排序</button>
+            </div>
+
+            <div class="tip" id="tipBox"></div>
+
+            <div class="form-row">
+                <input id="foodName" placeholder="美食名称">
+                <input id="foodPlace" placeholder="地点">
+                <input id="foodType" placeholder="类型（火锅/面食等）">
+                <input id="foodPrice" placeholder="人均价格" type="number">
+                <input id="foodScore" placeholder="评分 0-5" type="number" step="0.1">
+            </div>
+
+            <div class="form-row">
+                <input id="foodDesc" placeholder="简介">
+                <input type="hidden" id="editId">
+                <button id="addBtn">添加美食</button>
+                <button id="cancelEditBtn" style="display:none">取消编辑</button>
+            </div>
+
+        </div>
+
+        <!-- ==================== 美食列表 ==================== -->
+        <div class="food-list" id="foodListBox"></div>
+
+        <!-- ==================== 第三题：AI美食评价 ==================== -->
+        <div class="ai-area">
+
+            <h2>🤖 AI 美食评价</h2>
+
+            <div class="ai-select-row">
+
+                <select id="aiFoodSelect">
+                    <option value="">请选择一条已有美食</option>
+                </select>
+
+                <button id="aiAnalyzeBtn">
+                    AI 分析
+                </button>
+
+            </div>
+
+            <!-- 模拟评价 -->
+            <div class="review-box" id="reviewBox">
+                <p class="ai-empty">
+                    请选择一条美食查看模拟用户评价
+                </p>
+            </div>
+
+            <!-- AI结果 -->
+            <div class="ai-result" id="aiResult">
+                <p class="ai-empty">
+                    请选择一条美食，然后点击“AI 分析”
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        // ============================================================
+        // 1. 第二题：美食数据
+        // ============================================================
+
+        let foodList =
+            JSON.parse(localStorage.getItem("foodData")) || [
+                //如果 localStorage 里面有 foodData，就使用它；如果没有，就使用后面的默认数组。
+                {//js对象，属性名 : 属性值
+                    id: 1,
+                    name: "老巷牛肉面",
+                    place: "学校西门小吃街",
+                    type: "面食",
+                    price: 14,
+                    score: 4.7,
+                    desc: "汤底浓郁，牛肉分量足"
+                },
+
+                {
+                    id: 2,
+                    name: "番茄酸菜鱼",
+                    place: "万达三楼",
+                    type: "川菜",
+                    price: 68,
+                    score: 4.2,
+                    desc: "鱼肉滑嫩，番茄汤底酸甜开胃"
+                },
+
+                {
+                    id: 3,
+                    name: "炭火烤肉",
+                    place: "大学城夜市",
+                    type: "烧烤",
+                    price: 85,
+                    score: 4.5,
+                    desc: "炭火现烤，五花肉强烈推荐"
+                }
+            ];
+
+        let editId = null;
+
+
+        // ============================================================
+        // 2. 获取DOM
+        // ============================================================
+        /*#代表ID 选择器
+        .代表类 选择器
+         */
+        const foodListBox =
+            document.querySelector("#foodListBox");
+
+        const searchInput =
+            document.querySelector("#searchInput");
+
+        const sortSelect =
+            document.querySelector("#sortSelect");
+
+        const searchBtn =
+            document.querySelector("#searchBtn");
+
+        const tipBox =
+            document.querySelector("#tipBox");
+
+        const foodName =
+            document.querySelector("#foodName");
+
+        const foodPlace =
+            document.querySelector("#foodPlace");
+
+        const foodType =
+            document.querySelector("#foodType");
+
+        const foodPrice =
+            document.querySelector("#foodPrice");
+
+        const foodScore =
+            document.querySelector("#foodScore");
+
+        const foodDesc =
+            document.querySelector("#foodDesc");
+
+        const editIdInput =
+            document.querySelector("#editId");
+
+        const addBtn =
+            document.querySelector("#addBtn");
+
+        const cancelEditBtn =
+            document.querySelector("#cancelEditBtn");
+
+
+        // AI相关DOM
+        const aiFoodSelect =
+            document.querySelector("#aiFoodSelect");
+
+        const aiAnalyzeBtn =
+            document.querySelector("#aiAnalyzeBtn");
+
+        const reviewBox =
+            document.querySelector("#reviewBox");
+
+        const aiResult =
+            document.querySelector("#aiResult");
+
+
+        // ============================================================
+        // 3. localStorage
+        // ============================================================
+
+        function saveToLocal() {
+
+            localStorage.setItem(
+                "foodData",
+                JSON.stringify(foodList)
+            );//localstorage持久化保存，关闭网页不会丢失，只能存字符串
+            // JSON.stringify()把对象转换成json字符串
+        }
+
+
+        // ============================================================
+        // 4. 第二题：渲染美食列表
+        // ============================================================
+
+        function renderList(list) {
+
+            foodListBox.innerHTML = "";//清空旧内容
+
+            if (list.length === 0) {
+
+                foodListBox.innerHTML =
+                    `<div class="empty-text">
+                        没有找到美食信息
+                    </div>`;
+
+                return;
+            }
+
+            list.forEach(function (item) {
+
+                const cardDiv =
+                    document.createElement("div");
+
+                cardDiv.className =
+                    "food-card";
+
+                cardDiv.innerHTML = `
+
+                    <h3>${item.name}</h3>
+
+                    <p>📍地点：${item.place}</p>
+
+                    <p>🍽类型：${item.type}</p>
+
+                    <p>💰人均：${item.price}元</p>
+
+                    <p>⭐评分：${item.score}</p>
+
+                    <p>📝简介：${item.desc}</p>
+
+                    ${item.aiTags
+                        ?
+                        `<p>🤖AI标签：
+                            ${item.aiTags.join("、")}
+                        </p>`
+                        :
+                        ""// 没有AI标签时，不显示
+                    }
+
+                    <div class="card-btn">
+
+                        <button
+                            onclick="editFood(${item.id})">
+                            编辑
+                        </button>
+
+                        <button
+                            onclick="deleteFood(${item.id})">
+                            删除
+                        </button>
+
+                    </div>
+                `;
+
+                foodListBox.appendChild(cardDiv);
+                //前面`createElement`只是在内存创建标签，页面看不到；执行`appendChild`之后，卡片才被挂载到 DOM 树上，页面渲染出来
+            });
+        }
+
+
+        // ============================================================
+        // 5. 删除
+        // ============================================================
+
+        function deleteFood(id) {
+
+            foodList =
+                foodList.filter(function (item) {
+
+                    return item.id !== id;
+                });
+            //移除相等id的元素
+            saveToLocal();
+
+            renderList(foodList);
+            //重新渲染卡片，页面上那条被删掉的卡片消失
+            renderAIFoodSelect();
+
+            showTip("删除成功");
+        }
+        //filter**不会修改原数组**，必须写 `foodList = foodList.filter(...)` 把新数组存回去
+
+        // ============================================================
+        // 6. 编辑
+        // ============================================================
+
+        function editFood(id) {
+
+            const target =
+                foodList.find(item => item.id === id);
+
+            if (!target) {
+                return;
+            }
+
+            editId = id;
+            // 把找到美食的数据，回填到页面表单输入框中
+            foodName.value = target.name;
+            foodPlace.value = target.place;
+            foodType.value = target.type;
+            foodPrice.value = target.price;
+            foodScore.value = target.score;
+            foodDesc.value = target.desc;
+
+            editIdInput.value = id;
+
+            addBtn.innerText = "保存修改";
+
+            cancelEditBtn.style.display = "block";
+            // 显示【取消编辑】按钮
+        }
+
+
+        cancelEditBtn.onclick =
+            function () {
+
+                clearForm();
+            };
+
+
+        function clearForm() {
+
+            foodName.value = "";
+            foodPlace.value = "";
+            foodType.value = "";
+            foodPrice.value = "";
+            foodScore.value = "";
+            foodDesc.value = "";
+
+            editId = null;
+
+            editIdInput.value = "";
+
+            addBtn.innerText = "添加美食";
+
+            cancelEditBtn.style.display = "none";
+
+            hideTip();
+        }
+
+
+        // ============================================================
+        // 7. 添加 / 修改
+        // ============================================================
+
+        addBtn.onclick =
+            function () {
+
+                const name =
+                    foodName.value.trim();
+
+                const place =
+                    foodPlace.value.trim();
+
+                const type =
+                    foodType.value.trim();
+
+                const price =
+                    Number(foodPrice.value);
+
+                const score =
+                    Number(foodScore.value);
+
+                const desc =
+                    foodDesc.value.trim();
+
+
+                if (!name) {
+
+                    showTip(
+                        "美食名称不能为空！"
+                    );
+
+                    return;
+                }
+
+                //超出范围特判
+                if (isNaN(price) || price <= 0) {
+
+                    showTip(
+                        "价格必须是大于0的数字！"
+                    );
+
+                    return;
+                }
+
+
+                if (
+                    isNaN(score) ||
+                    score < 0 ||
+                    score > 5
+                ) {
+
+                    showTip(
+                        "评分范围0~5！"
+                    );
+
+                    return;
+                }
+
+
+                if (editId) {
+
+                    const index =
+                        foodList.findIndex(
+                            item => item.id === editId
+                        );
+
+                    const oldFood =
+                        foodList[index];
+
+                    foodList[index] = {
+
+                        id: editId,
+
+                        name,
+                        place,
+                        type,
+                        price,
+                        score,
+                        desc,
+
+                        // 保留原来的AI标签
+                        aiTags: oldFood.aiTags || []
+                    };
+
+                    showTip("修改成功");
+
+                } else {
+
+                    const newId =
+                        Date.now();
+
+                    foodList.push({
+
+                        id: newId,
+
+                        name,
+                        place,
+                        type,
+                        price,
+                        score,
+                        desc
+                    });
+
+                    showTip("新增美食成功");
+                }
+
+
+                saveToLocal();
+
+                renderList(foodList);
+
+                renderAIFoodSelect();
+
+                clearForm();
+            };
+
+
+        // ============================================================
+        // 8. 搜索 + 排序
+        // ============================================================
+
+        searchBtn.onclick =
+            function () {
+
+                const keyword =
+                    searchInput.value
+                        .trim()
+                        .toLowerCase();
+
+                let resultList =
+                    [...foodList];
+
+
+                if (keyword) {
+
+                    resultList =
+                        resultList.filter(
+                            function (item) {
+
+                                return (
+
+                                    item.name
+                                        .toLowerCase()
+                                        .includes(keyword)
+
+                                    ||
+
+                                    item.place
+                                        .toLowerCase()
+                                        .includes(keyword)
+                                );
+                            }
+                        );
+                }
+
+
+                const sortType =
+                    sortSelect.value;
+                //获取类型
+
+                if (sortType === "score-desc") {
+                    //降序
+                    resultList.sort(
+                        (a, b) =>
+                            b.score - a.score
+                    );
+
+                } else if (
+                    sortType === "price-asc"
+                ) {
+
+                    resultList.sort(
+                        (a, b) =>
+                            a.price - b.price
+                    );
+                }
+
+
+                renderList(resultList);
+                //未匹配
+
+                if (
+                    keyword &&
+                    resultList.length === 0
+                ) {
+
+                    showTip(
+                        "没有匹配的美食"
+                    );
+
+                } else {
+
+                    hideTip();
+                }
+            };
+
+
+        // ============================================================
+        // 9. 提示
+        // ============================================================
+
+        function showTip(msg) {
+
+            tipBox.innerText = msg;
+        }
+
+
+        function hideTip() {
+
+            tipBox.innerText = "";
+        }
+
+
+        // ============================================================
+        // ==================== 第三题开始 ============================
+        // ============================================================
+
+
+        // ============================================================
+        // 10. 模拟用户评价
+        // ============================================================
+
+        const reviewData = {
+
+            1: [
+
+                "汤底很浓郁，牛肉给得特别多。",
+
+                "14元一碗，价格很实惠，学生党很适合。",
+
+                "味道不错，不过高峰期人比较多。"
+            ],
+
+            2: [
+
+                "鱼肉很嫩，番茄汤底酸酸甜甜的。",
+
+                "分量比较足，两三个人一起吃比较合适。",
+
+                "价格稍微有一点贵。"
+            ],
+
+            3: [
+
+                "炭火烤出来的肉很香，五花肉很好吃。",
+
+                "晚上和朋友一起吃氛围很好。",
+
+                "价格比较高，适合多人一起吃。"
+            ]
+        };
+
+
+        // 从localStorage读取后来自动生成的模拟评价
+        // 这样刷新页面以后，新建美食的模拟评价也不会丢失
+        const savedReviewData =
+            JSON.parse(localStorage.getItem("reviewData") || "{}");
+
+        // 把保存过的评价合并到原来的reviewData里
+        // 原来1、2、3号美食的评价仍然保留
+        Object.assign(reviewData, savedReviewData);
+
+
+        // 保存模拟评价数据
+        // 因为新增美食的id是Date.now()生成的，必须把对应评价也保存起来
+        function saveReviewData() {
+
+            localStorage.setItem(
+                "reviewData",
+                JSON.stringify(reviewData)
+            );
+        }
+
+
+        // 根据新建美食的信息，自动生成几条模拟用户评价
+        // 这样新建美食以后，也能显示评价并进行AI分析
+        function generateMockReviews(food) {
+
+            const name =
+                food.name || "这家店";
+
+            const type =
+                food.type || "美食";
+
+            const place =
+                food.place || "附近";
+
+            const price =
+                food.price ? food.price + "元左右" : "价格还可以";
+
+            const desc =
+                food.desc || "整体体验不错";
+
+            return [
+
+                name + "的" + type + "味道不错，" + desc + "。",
+
+                "位置在" + place + "，比较好找，适合日常去吃。",
+
+                "人均大概" + price + "，整体性价比还可以。",
+
+                "如果和朋友一起去，体验会更好。"
+            ];
+        }
+
+
+        // 确保每一条美食都有模拟评价
+        // 如果已有评价，就直接使用原来的
+        // 如果没有评价，就自动生成一组并保存
+        function ensureFoodReviews(food) {
+
+            if (!food) {
+
+                return [];
+            }
+
+            if (
+                !Array.isArray(reviewData[food.id]) ||
+                reviewData[food.id].length === 0
+            ) {
+
+                reviewData[food.id] =
+                    generateMockReviews(food);
+
+                saveReviewData();
+            }
+
+            return reviewData[food.id];
+        }
+
+
+        // ============================================================
+        // 11. 将第二题已有美食放进AI选择框
+        // ============================================================
+
+        function renderAIFoodSelect() {
+
+            aiFoodSelect.innerHTML =
+                `<option value="">
+                    请选择一条已有美食
+                </option>`;
+
+
+            foodList.forEach(function (item) {
+
+                // 渲染AI选择框时，顺便确保这条美食有模拟评价
+                ensureFoodReviews(item);
+
+                const option =
+                    document.createElement("option");
+
+                option.value =
+                    item.id;
+
+                option.innerText =
+                    item.name +
+                    " - " +
+                    item.place;
+
+                aiFoodSelect.appendChild(option);
+            });
+        }
+
+
+        // ============================================================
+        // 12. 用户选择美食
+        // ============================================================
+
+        aiFoodSelect.onchange =
+            function () {
+
+                const id =
+                    Number(aiFoodSelect.value);//转为数字id
+
+                //// 清空评价区域，重置AI结果提示文字
+                reviewBox.innerHTML = "";
+
+                aiResult.innerHTML = `
+                    <p class="ai-empty">
+                        请选择“AI 分析”查看分析结果
+                    </p>
+                `;
+
+
+                if (!id) {
+
+                    reviewBox.innerHTML = `
+                        <p class="ai-empty">
+                            请选择一条美食查看模拟用户评价
+                        </p>
+                    `;
+
+                    return;
+                }
+
+
+                // 根据选择的id找到对应美食
+                const food =
+                    foodList.find(item => item.id === id);
+
+                // 获取这条美食的模拟评价
+                // 如果是新建美食，会在这里自动生成
+                const reviews =
+                    ensureFoodReviews(food);
+
+
+                // 空结果状态
+                if (
+                    !reviews ||
+                    reviews.length === 0
+                ) {
+
+                    reviewBox.innerHTML = `
+                        <p class="ai-empty">
+                            暂无模拟评价
+                        </p>
+                    `;
+
+                    return;
+                }
+
+
+                let html =
+                    "<h3>💬 模拟用户评价</h3>";
+
+
+                reviews.forEach(
+                    function (review) {
+
+                        html += `
+
+                            <div class="review-item">
+                                ${review}
+                            </div>
+
+                        `;
+                    }
+                );
+
+
+                reviewBox.innerHTML =
+                    html;
+            };
+        //从`reviewData`对象里，用 id 取出对应的评价数组
+
+
+        // ============================================================
+        // 13. 真实AI接口
+        // ============================================================
+
+        // 前端请求自己的 Node.js 后端
+        // 后端再调用阿里云 Qwen
+        //
+        // 数据流程：
+        // food + reviews
+        //      ↓
+        // fetch("/api/ai-food-review")
+        //      ↓
+        // Node.js server.js
+        //      ↓
+        // 阿里云 Qwen
+        //      ↓
+        // JSON
+        //      ↓
+        // 当前页面显示AI结果
+
+
+        // 本地模拟AI分析
+        // 当Node服务没启动、阿里云欠费或网络失败时，使用这个兜底结果
+        // 这样页面不会直接显示Failed to fetch，方便课堂演示
+        function createLocalAIResult(food, reviews, error) {
+
+            const goodReviews =
+                reviews.filter(function (review) {
+
+                    return (
+                        review.includes("不错") ||
+                        review.includes("好") ||
+                        review.includes("香") ||
+                        review.includes("适合") ||
+                        review.includes("性价比")
+                    );
+                });
+
+            const badReviews =
+                reviews.filter(function (review) {
+
+                    return (
+                        review.includes("贵") ||
+                        review.includes("排队") ||
+                        review.includes("人多") ||
+                        review.includes("高峰")
+                    );
+                });
+
+            return {
+
+                summary:
+                    food.name +
+                    "整体评价较好，用户主要认可它的口味、位置和日常用餐体验。" +
+                    "当前结果为本地模拟AI分析，原因是：" +
+                    error.message,
+
+                advantages:
+                    goodReviews.length > 0
+                        ? goodReviews.slice(0, 3)
+                        : [
+                            "整体味道比较稳定",
+                            "适合日常用餐",
+                            "用户体验较好"
+                        ],
+
+                disadvantages:
+                    badReviews.length > 0
+                        ? badReviews.slice(0, 3)
+                        : [
+                            "暂时没有明显集中差评",
+                            "高峰期体验可能会受影响"
+                        ],
+
+                tags: [
+                    food.type || "美食",
+                    "模拟AI分析",
+                    "适合尝试"
+                ]
+            };
+        }
+
+
+        async function requestAI(food, reviews) {
+
+            try {
+
+                // ====================================================
+                // 1. 使用 fetch 向自己的后端发送请求
+                // ====================================================
+
+                const response = await fetch(
+                    "/api/ai-food-review",
+                    {
+                        // POST：向服务器提交数据；get：从服务器获取数据
+                        method: "POST",
+
+                        // 告诉服务器请求体是 JSON
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        // 把 food 和 reviews 转换成 JSON 字符串
+                        body: JSON.stringify({
+
+                            // 把当前项目里的字段名，转换成后端AI接口使用的字段名
+                            food: {
+                                id: food.id,
+                                name: food.name,
+                                address: food.place,
+                                category: food.type,
+                                price: food.price,
+                                rating: food.score,
+                                desc: food.desc
+                            },
+
+                            // 后端兼容{text: "..."}格式
+                            // 所以前端把字符串评价转换成对象数组
+                            reviews: reviews.map(function (review) {
+
+                                return {
+                                    text: review
+                                };
+                            })
+                        })
+                    }
+                );
+
+
+                // ====================================================
+                // 2. 判断HTTP请求是否成功
+                // ====================================================
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "HTTP请求失败，状态码：" +
+                        response.status
+                    );
+                }
+
+
+                // ====================================================
+                // 3. 解析服务器返回的JSON
+                // ====================================================
+
+                const result =
+                    await response.json();
+
+
+                // ====================================================
+                // 4. 返回AI结果
+                // ====================================================
+
+                // 后端如果返回success:false，说明AI分析失败
+                if (result.success === false) {
+
+                    throw new Error(
+                        result.error || "AI 分析失败"
+                    );
+                }
+
+                // server.js返回的数据在data里面
+                // 这里直接返回data，下面显示AI结果时就能读取summary、advantages等字段
+                return result.data || result;
+
+            } catch (error) {
+
+                // 如果真实AI请求失败，就返回本地模拟AI分析
+                // 常见原因：server.js没启动、阿里云额度不足、网络请求失败
+                return createLocalAIResult(food, reviews, error);
+            }
+        }
+
+        // ============================================================
+        // 15. AI分析按钮
+        // ============================================================
+
+        aiAnalyzeBtn.onclick = async function () {
+
+            // 获取当前选择的美食 ID
+            const foodId = parseInt(aiFoodSelect.value);
+
+            // 没有选择美食
+            if (!foodId) {
+                aiResult.innerHTML = `
+            <div class="empty-state">
+                请先选择一家美食
+            </div>
+        `;
+                return;
+            }
+
+            // 根据 ID 找到对应美食
+            const food = foodList.find(item => item.id === foodId);
+
+            if (!food) {
+                aiResult.innerHTML = `
+            <div class="empty-state">
+                找不到这家美食
+            </div>
+        `;
+                return;
+            }
+
+            // 获取这家美食对应的评价
+            // 获取这家美食对应的评价
+            // 新建美食如果还没有评价，会自动生成模拟评价
+            const reviews = ensureFoodReviews(food);
+
+            // 没有评价
+            if (reviews.length === 0) {
+                aiResult.innerHTML = `
+            <div class="empty-state">
+                暂无用户评价，无法进行 AI 分析
+            </div>
+        `;
+                return;
+            }
+
+            // 按钮进入加载状态
+            aiAnalyzeBtn.disabled = true;
+            aiAnalyzeBtn.textContent = "AI 分析中...";
+
+            aiResult.innerHTML = `
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>AI 正在分析用户评价，请稍候...</p>
+        </div>
+    `;
+
+            try {
+
+                // ============================
+                // 调用真正的后端 AI 接口
+                // ============================
+
+                const result = await requestAI(food, reviews);
+
+
+                // ============================
+                // 检查 AI 返回结果
+                // ============================
+
+                if (!result) {
+                    throw new Error("AI 没有返回结果");
+                }
+
+
+                // ============================
+                // 显示 AI 总结
+                // ============================
+
+                let html = `
+            <div class="ai-result-content">
+
+                <div class="ai-summary">
+                    <h3>📋 综合评价</h3>
+                    <p>
+                        ${result.summary || "暂无总结"}
+                    </p>
+                </div>
+        `;
+
+
+                // ============================
+                // 优点
+                // ============================
+
+                if (
+                    Array.isArray(result.advantages) &&
+                    result.advantages.length > 0
+                ) {
+
+                    html += `
+                <div class="ai-section">
+                    <h3>👍 用户认可</h3>
+                    <ul>
+            `;
+
+                    result.advantages.forEach(item => {
+
+                        html += `
+                    <li>${item}</li>
+                `;
+
+                    });
+
+                    html += `
+                    </ul>
+                </div>
+            `;
+                }
+
+
+                // ============================
+                // 缺点
+                // ============================
+
+                if (
+                    Array.isArray(result.disadvantages) &&
+                    result.disadvantages.length > 0
+                ) {
+
+                    html += `
+                <div class="ai-section">
+                    <h3>👎 用户反馈的问题</h3>
+                    <ul>
+            `;
+
+                    result.disadvantages.forEach(item => {
+
+                        html += `
+                    <li>${item}</li>
+                `;
+
+                    });
+
+                    html += `
+                    </ul>
+                </div>
+            `;
+                }
+
+
+                // ============================
+                // AI 标签
+                // ============================
+
+                if (
+                    Array.isArray(result.tags) &&
+                    result.tags.length > 0
+                ) {
+
+                    html += `
+                <div class="ai-section">
+                    <h3>🏷️ AI 标签</h3>
+
+                    <div class="ai-tags">
+            `;
+
+                    result.tags.forEach(tag => {
+
+                        html += `
+                    <span class="ai-tag">
+                        ${tag}
+                    </span>
+                `;
+
+                    });
+
+                    html += `
+                    </div>
+                </div>
+            `;
+                }
+
+
+                // 关闭外层
+                html += `
+            </div>
+        `;
+
+
+                // 显示结果
+                aiResult.innerHTML = html;
+
+
+            } catch (error) {
+
+                console.error("AI 分析失败：", error);
+
+                aiResult.innerHTML = `
+            <div class="error-state">
+                <h3>AI 分析失败</h3>
+                <p>${error.message}</p>
+                <p>请稍后重试。</p>
+            </div>
+        `;
+
+            } finally {
+
+                // 恢复按钮
+                aiAnalyzeBtn.disabled = false;
+                aiAnalyzeBtn.textContent = "AI 分析";
+
+            }
+
+        };
+
+        // ============================================================
+        // 16. 应用AI标签
+        // ============================================================
+
+        function applyAITags(foodId) {
+
+            const food =
+                foodList.find(
+                    function (item) {
+
+                        return item.id === foodId;
+                    }
+                );
+
+
+            if (!food) {
+
+                return;
+            }
+
+
+            food.aiTags = [
+
+                food.type,
+
+                "值得尝试",
+
+                "用户评价较好"
+            ];
+
+
+            // 保存到localStorage
+            saveToLocal();
+
+
+            // 重新渲染第二题的美食列表
+            renderList(foodList);
+
+
+            // 显示应用成功
+            const oldButton =
+                document.querySelector(
+                    ".apply-btn"
+                );
+
+
+            if (oldButton) {
+
+                oldButton.innerText =
+                    "✓ AI标签已应用";
+
+                oldButton.disabled =
+                    true;
+            }
+
+
+            const successText =
+                document.createElement("p");
+
+            successText.className =
+                "applied-text";
+
+            successText.innerText =
+                "AI标签已经保存到这条美食中。";
+
+
+            aiResult.appendChild(
+                successText
+            );
+        }
+
+
+        // ============================================================
+        // 17. 页面初始化
+        // ============================================================
+
+        renderList(foodList);
+
+        renderAIFoodSelect();
+
+    </script>
+
+</body>
+
+</html>

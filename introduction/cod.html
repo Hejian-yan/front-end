@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使命召唤专题站</title>
+    <link rel="stylesheet" href="style1.css">
+</head>
+
+<body>
+    <!-- 顶部导航栏 -->
+    <header>
+        <nav>
+            <div class="cod-logo">
+                <h1>使命召唤专题</h1>
+            </div>
+            <ul class="cod-nav-links">
+                <li><a href="#cod-home">首页</a></li>
+                <li><a href="#cod-intro">IP介绍</a></li>
+                <li><a href="#cod-series">系列分支</a></li>
+                <li><a href="#cod-character">经典角色</a></li>
+            </ul>
+        </nav>
+    </header>
+    <!-- 轮播图 -->
+    <section id="cod-home" class="cod-carousel-container">
+        <div class="cod-carousel">
+            <div class="cod-carousel-item">
+                <img src="../image/scenery1.jpg">
+            </div>
+            <div class="cod-carousel-item">
+                <img src="../image/scenery2.jpg">
+            </div>
+            <div class="cod-carousel-item">
+                <img src="../image/scenery3.jpg">
+            </div>
+        </div>
+        <button class="cod-carousel-btn cod-prev-btn">&lt;</button>
+        <button class="cod-carousel-btn cod-next-btn">&gt;</button>
+        <div class="cod-carousel-indicators">
+            <span class="cod-indicator active" data-index="0"></span>
+            <span class="cod-indicator" data-index="1"></span>
+            <span class="cod-indicator" data-index="2"></span>
+        </div>
+    </section>
+    <div class="cod-container">
+        <!-- IP介绍 -->
+        <section id="cod-intro">
+            <h2>IP简介</h2>
+            <div class="cod-intro-content">
+                <img src="../image/profile.png" alt="游戏海报" class="cod-avatar">
+                <div>
+                    <p>《使命召唤》(Call of Duty,简称 COD)是动视公司推出的经典第一人称射击游戏 IP。</p>
+                    <p> 自 2003 年初代发售至今，凭借电影化叙事、沉浸式战场氛围、真实枪械手感，成为全球最具影响力 FPS 系列之一。</p>
+                </div>
+            </div>
+        </section>
+        <!-- 系列介绍 -->
+        <section id="cod-series">
+            <h2>系列分支介绍</h2>
+            <div class="cod-series-card-wrap">
+                <div class="cod-series-card">
+                    <h3>现代战争系列</h3>
+                    <p>最知名的分支,TF141 特遣队为主角。讲述全球反恐作战，名场面无数：核爆、幽灵牺牲</p>
+                </div>
+                <div class="cod-series-card">
+                    <h3>黑色行动系列</h3>
+                    <p>偏向冷战、秘密实验、阴谋悬疑风格，剧情扑朔迷离，时间线交错</p>
+                </div>
+                <div class="cod-series-card">
+                    <h3>二战系列</h3>
+                    <p>系列起点，还原诺曼底登陆、东线战场，聚焦普通士兵的战争体验</p>
+                </div>
+            </div>
+        </section>
+        <!-- 经典角色 -->
+        <section id="cod-character">
+            <h2>经典角色</h2>
+            <div class="cod-character-wrap">
+                <div class="cod-character-item">
+                    <span>Ghost(幽灵)</span>
+                </div>
+                <div class="cod-character-item">
+                    <span>Soap(肥皂)</span>
+                </div>
+                <div class="cod-character-item">
+                    <span>Price(普莱斯)</span>
+                </div>
+            </div>
+        </section>
+    </div>
+    <!-- 页脚 -->
+    <footer class="cod-footer">
+        <p>&copy; 2026 使命召唤专题站 | 课程网页作业</p>
+    </footer>
+    <script>
+        // 轮播图实现
+        const carouselDom = document.querySelector('.cod-carousel');
+        const carouselItems = document.querySelectorAll('.cod-carousel-item');
+        const prevBtn = document.querySelector('.cod-prev-btn');
+        const nextBtn = document.querySelector('.cod-next-btn');
+        const indicators = document.querySelectorAll('.cod-indicator');
+        const carouselBox = document.querySelector('.cod-carousel-container');
+
+        let currentIndex = 0;
+        const itemCount = carouselItems.length;
+        let autoCarouselTimer;
+
+        // 自动轮播
+        function startAutoCarousel() {
+            autoCarouselTimer = setInterval(function () {
+                currentIndex = (currentIndex + 1) % itemCount;
+                updateCarouselView();
+            }, 3000);
+        }
+        // 停止自动轮播
+        function stopAutoCarousel() {
+            clearInterval(autoCarouselTimer);
+        }
+        // 更新轮播图视图
+        function updateCarouselView() {
+            carouselDom.style.transform = 'translateX(-' + currentIndex * 100 + '%)';
+            indicators.forEach(function (dot, index) {
+                dot.classList.toggle('active', index === currentIndex);
+            });
+        }
+        // 点击下一张
+        nextBtn.onclick = function () {
+            currentIndex = (currentIndex + 1) % itemCount;
+            updateCarouselView();
+        }
+        // 点击上一张
+        prevBtn.onclick = function () {
+            currentIndex = (currentIndex - 1 + itemCount) % itemCount;
+            updateCarouselView();
+        }
+        // 点击指示器切换
+        indicators.forEach(function (dot, index) {
+            dot.onclick = function () {
+                currentIndex = index;
+                updateCarouselView();
+            }
+        });
+        // 鼠标悬停暂停/恢复自动轮播
+        carouselBox.onmouseenter = stopAutoCarousel;
+        carouselBox.onmouseleave = startAutoCarousel;
+
+        // 页面滚动动画观察器
+        const pageSections = document.querySelectorAll('section');
+        const sectionObserver = new IntersectionObserver(function (entries) {
+            //IntersectionObserver 用来监测元素和视口是否相交
+            entries.forEach(function (entryItem) {
+                if (entryItem.isIntersecting) {
+                    entryItem.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+        //threshold: 0.1 只要 section 有 10% 进入屏幕，就给它添加 active 类，触发 CSS 滚动入场动画
+        pageSections.forEach(function (sectionDom) {
+            sectionObserver.observe(sectionDom);
+        });
+
+        // 初始化启动轮播
+        startAutoCarousel();
+        //创建一个观察器，监视页面中的 section；
+
+    </script>
+</body>
+
+</html>
